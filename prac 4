@@ -1,0 +1,174 @@
+import tkinter
+from tkinter import PhotoImage
+from tkinter import messagebox
+
+import mysql.connector
+
+# ---------------- DATABASE CONNECTION ---------------- #
+con = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="admin",  # change this
+    database="doctor_agency"
+)
+cursor = con.cursor()
+
+
+# ---------------- VALIDATION ---------------- #
+def validate_aadhar(a):
+    return a.isdigit() and len(a) == 12
+
+
+def patient_signup():
+    name = p_name.get()
+    age = p_age.get()
+    gender = p_gender.get()
+    area = p_area.get()
+    aadhar = p_aadhar.get()
+    password = p_password.get()
+
+    if not validate_aadhar(aadhar):
+        messagebox.showerror("Error", "Invalid Aadhaar")
+        return
+    
+    try:
+        cursor.execute(
+            "INSERT INTO patients(name,age,gender,area,aadhar,password) VALUES(%s,%s,%s,%s,%s,%s)",
+            (name, age, gender, area, aadhar, password)
+        )
+        con.commit()
+        messagebox.showinfo("Success", "Patient Registered")
+    except:
+        messagebox.showerror("Error", "Aadhaar already exists")
+
+#Patient login
+def patient_login():
+    pat= tkinter.Toplevel()
+    pat.title("Patient Panel")
+    pat.geometry("400x500")
+
+    frame=tkinter.Frame(pat,bg='#333333')
+    global current_patient
+    global p_login_aadhar, p_login_password
+
+    tkinter.Label(pat, text="Patient Login",bg="#FCE7E7",fg="#130909",font=("Segoe UI",26)).pack()
+    #creating widgets #
+    p_loginaadhar_label=tkinter.Label(frame,text="Enter Aadhar number",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_login_aadhar=tkinter.Entry(frame,font=("Arial",16))
+    p_login_password_label=tkinter.Label(frame,text="Enter Password",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_login_password=tkinter.Entry(frame,font=("Arial",16))
+    login_button=tkinter.Button(frame,text="Login",bg='#FFFFFF',font=("Arial",16),command=patient_login)
+   
+    #placing widgets#
+    p_loginaadhar_label.grid(row=1,column=0)
+    p_login_aadhar.grid(row=1,column=1,pady=20)
+    p_login_password_label.grid(row=2,column=0)
+    p_login_password.grid(row=2,column=1,pady=20)
+    login_button.grid(row=3,column=0,columnspan=2,pady=30)
+    frame.pack()
+
+    
+
+
+#patient window
+def patient_window():
+    root.withdraw()
+    global win
+    win = tkinter.Toplevel()
+    win.title("Patient Panel")
+    win.geometry("400x500")
+    frame=tkinter.Frame(win,bg='#333333')
+    global p_name, p_age, p_gender, p_area, p_aadhar, p_password
+    global p_login_aadhar, p_login_pass
+    
+    tkinter.Label(win, text="Patient Signup",bg="#FCE7E7",fg="#130909",font=("Segoe UI",26)).pack()
+
+     #creating widgets
+    
+    p_name_label=tkinter.Label(frame,text="Patient name",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_name=tkinter.Entry(frame,font=("Arial",16))
+    p_age_label=tkinter.Label(frame,text="Age",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_age=tkinter.Entry(frame,font=("Arial",16))
+    p_gender_label=tkinter.Label(frame,text="Gender",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_gender=tkinter.Entry(frame,font=("Arial",16))
+    p_area_label=tkinter.Label(frame,text="Area",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_area=tkinter.Entry(frame,font=("Arial",16))
+    p_aadhar_label=tkinter.Label(frame,text="Aadhar no",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_aadhar=tkinter.Entry(frame,font=("Arial",16))
+    p_password_label=tkinter.Label(frame,text="Password",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+    p_password=tkinter.Entry(frame,show="*",font=("Arial",16))
+
+    signup_button=tkinter.Button(frame,text="Signup",bg='#FFFFFF',font=("Arial",20),command=patient_signup)
+    login_button=tkinter.Button(frame,text="Login",bg='#FFFFFF',font=("Arial",16),command=patient_login)
+    login_lable=tkinter.Label(frame,text="Already have an account ?",bg='#333333',fg='#FFFFFF',font=("Arial",16))
+
+    # placeing the widgets
+    p_name_label.grid(row=1,column=0)
+    p_name.grid(row=1,column=1,pady=20)
+    p_age_label.grid(row=2,column=0)
+    p_age.grid(row=2,column=1,pady=20)
+    p_gender_label.grid(row=3,column=0)
+    p_gender.grid(row=3,column=1,pady=20)
+    p_area_label.grid(row=4,column=0)
+    p_area.grid(row=4,column=1,pady=20)
+    p_aadhar_label.grid(row=5,column=0)
+    p_aadhar.grid(row=5,column=1,pady=20)
+    p_password_label.grid(row=6,column=0)
+    p_password.grid(row=6,column=1,pady=20)
+    signup_button.grid(row=7,column=0,columnspan=2,pady=30)
+    login_lable.grid(row=9,column=0)
+    login_button.grid(row=9,column=1,pady=10)
+    frame.pack()
+
+
+
+root = tkinter.Tk()
+root.title("Hospital System")
+root.geometry("400x300")
+
+image_path=PhotoImage(file=r"C:\Users\ramya\Downloads\Medical.png")
+bg_image=tkinter.Label(root,image=image_path)
+bg_image.place(x=0,y=0,relheight=1,relwidth=1)
+
+
+canvas = tkinter.Canvas(root, width=550, height=100, bg="white", highlightthickness=0)
+canvas.pack(pady=20)
+
+# Function to create rounded rectangle
+def round_rect(canvas, x1, y1, x2, y2, radius=25, **kwargs):
+    points = [
+        x1+radius, y1,
+        x2-radius, y1,
+        x2, y1,
+        x2, y1+radius,
+        x2, y2-radius,
+        x2, y2,
+        x2-radius, y2,
+        x1+radius, y2,
+        x1, y2,
+        x1, y2-radius,
+        x1, y1+radius,
+        x1, y1
+    ]
+    return canvas.create_polygon(points, smooth=True, **kwargs)
+
+# Draw curved background
+round_rect(canvas, 10, 10, 540, 90, radius=40, fill="#091B3B")
+
+# Add text on top
+canvas.create_text(275, 50,text="SP Hospitals & Health Care",fill="white",font=("Arial", 30, "bold"))
+
+canvas.create_text(275, 100, text="Welcome", fill="black", font=("Arial", 18))
+
+btn_frame = tkinter.Frame(root)
+btn_frame.pack(anchor="w", padx=20, pady=40)
+
+
+# Buttons inside frame
+
+tkinter.Button(root,text="Patient",width=20,height=2,bg="#091B3B",fg="#FFFFFF",font=("Georgia", 12),command=patient_window).pack(side="left", padx=10)
+
+tkinter.Button(root,text="Doctor",width=20,height=2,bg="#091B3B",fg="#FFFFFF",font=("Georgia", 12)).pack(side="left", padx=10)
+
+
+root.mainloop()
