@@ -1,12 +1,22 @@
+import tkinter
 import customtkinter as ctk
 from tkinter import messagebox
 import mysql.connector
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+root = ctk.CTk()
+root.geometry("900x600")
+root.title("Doctor System")
+home_frame = ctk.CTkFrame(root)
+login_frame = ctk.CTkFrame(root)
+signup_frame = ctk.CTkFrame(root)
 
-# DATABASE CONNECTION
 
+
+# ================= DB =================
 def connect_db():
     return mysql.connector.connect(
         host="localhost",
@@ -14,11 +24,212 @@ def connect_db():
         password="admin",
         database="doctor_db"
     )
-root = ctk.CTk()
-root.title("Doctor Database System")
-root.geometry("700x500")
 
-# FRAMES
+# ================= DASHBOARD =================
+def open_dashboard(doctor_name):
+
+    dash = ctk.CTkToplevel()
+    dash.title("Doctor Dashboard")
+    dash.geometry("1200x700")
+
+    dash.grid_columnconfigure(0, weight=1)
+    dash.grid_columnconfigure(1, weight=1)
+    dash.grid_rowconfigure(0, weight=1)
+    dash.grid_rowconfigure(1, weight=1)
+
+    # =====================================================
+    # 🔵 TOP LEFT - PATIENTS
+    # =====================================================
+    frame_patients = ctk.CTkFrame(dash)
+    frame_patients.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+
+    ctk.CTkLabel(frame_patients, text="Patients", font=("Arial", 20, "bold")).pack(pady=10)
+
+    listbox = ctk.CTkTextbox(frame_patients)
+    listbox.pack(fill="both", expand=True)
+
+    # =====================================================
+    def load_patients():
+
+        conn = connect_db()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT r.patient_id, p.name, r.ailment, r.time_slot, r.status
+            FROM request r
+            JOIN patient p ON p.patient_id = r.patient_id
+        """)
+
+        rows = cur.fetchall()
+        conn.close()
+
+        listbox.delete("1.0", "end")
+
+        for r in rows:
+            listbox.insert("end", f"{r[0]} - {r[1]} | {r[3]} | {r[4]}\n")
+
+    # =====================================================
+    def show_patient(pid):
+
+        conn = connect_db()
+        cur = conn.cursor()
+
+        cur.execute("SELECT name, age, gender FROM patient WHERE patient_id=%s", (pid,))
+        p = cur.fetchone()
+
+        cur.execute("SELECT ailment, time_slot FROM request WHERE patient_id=%s", (pid,))
+        r = cur.fetchone()
+
+        conn.close()
+
+        popup = ctk.CTkToplevel(dash)
+        popup.geometry("350x300")
+
+        ctk.CTkLabel(popup, text="Patient Details", font=("Arial", 18, "bold")).pack(pady=10)
+
+        ctk.CTkLabel(popup, text=f"Name: {p[0]}").pack()
+        ctk.CTkLabel(popup, text=f"Age: {p[1]}").pack()
+        ctk.CTkLabel(popup, text=f"Gender: {p[2]}").pack()
+
+        ctk.CTkLabel(popup, text=f"Ailment: {r[0]}").pack()
+        ctk.CTkLabel(popup, text=f"Time Slot: {r[1]}").pack()
+
+    # ---------------- ACCEPT / REJECT ----------------
+    def update(status):
+
+        conn = connect_db()
+        cur = conn.cursor()
+
+        cur.execute("""
+            UPDATE request
+            SET status=%s
+            WHERE patient_id=%s
+        """, (status, pid))
+
+        conn.commit()
+        conn.close()
+
+        popup.destroy()
+
+        # 🔥 THIS REMOVES REJECTED PATIENT FROM LIST
+        load_patients()
+
+        ctk.CTkButton(
+            popup,
+            text="Accept",
+            fg_color="green",
+            command=lambda: update("accepted")
+        ).pack(pady=10)
+
+        ctk.CTkButton(
+            popup,
+            text="Reject",
+            fg_color="red",
+            command=lambda: update("rejected")
+        ).pack(pady=5)
+
+    # click handler
+    def on_click(event):
+        text = listbox.get("1.0", "end").strip().split("\n")[0]
+        if text:
+            pid = text.split(" - ")[0]
+            show_patient(pid)
+
+    listbox.bind("<Double-Button-1>", on_click)
+
+    load_patients()
+
+    # =====================================================
+    # 🔵 TOP RIGHT - CALENDAR
+    # =====================================================
+    calendar = ctk.CTkFrame(dash)
+    calendar.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+
+    ctk.CTkLabel(calendar, text="Appointments", font=("Arial", 20, "bold")).pack(pady=10)
+
+    slots = ["morning", "afternoon", "evening"]
+
+    def load_calendar():
+
+        for widget in calendar.winfo_children()[1:]:
+            widget.destroy()
+
+        for slot in slots:
+
+            box = ctk.CTkFrame(calendar)
+            box.pack(fill="x", pady=5)
+
+            ctk.CTkLabel(box, text=slot.upper(), font=("Arial", 16, "bold")).pack()
+
+            conn = connect_db()
+            cur = conn.cursor()
+
+            cur.execute("""
+                SELECT p.name
+                FROM request r
+                JOIN patient p ON p.patient_id = r.patient_id
+                WHERE r.time_slot=%s AND r.status='accepted'
+            """, (slot,))
+
+            patients = cur.fetchall()
+            conn.close()
+
+            for p in patients:
+                ctk.CTkLabel(box, text=p[0]).pack()
+
+    load_calendar()
+
+    # =====================================================
+    # 🔵 BOTTOM LEFT - ANALYTICS
+    # =====================================================
+    analytics = ctk.CTkFrame(dash)
+    analytics.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+
+    ctk.CTkLabel(analytics, text="Analytics", font=("Arial", 20, "bold")).pack()
+
+    def load_graph():
+
+        conn = connect_db()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT status, COUNT(*)
+            FROM request
+            GROUP BY status
+        """)
+
+        data = cur.fetchall()
+        conn.close()
+
+        if not data:
+            return
+
+        labels = [d[0] for d in data]
+        values = [d[1] for d in data]
+
+        fig = plt.Figure(figsize=(4,3))
+        ax = fig.add_subplot(111)
+        ax.bar(labels, values, color=["green", "red", "orange"])
+        ax.set_title("Request Status")
+
+        canvas = FigureCanvasTkAgg(fig, analytics)
+        canvas.get_tk_widget().pack()
+        canvas.draw()
+
+    load_graph()
+
+    # =====================================================
+    # 🔵 BOTTOM RIGHT - USER INFO + LOGOUT
+    # =====================================================
+    bottom = ctk.CTkFrame(dash)
+    bottom.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
+
+    ctk.CTkLabel(bottom, text=f"Dr. {doctor_name}", font=("Arial", 18)).pack(pady=20)
+
+    def logout():
+        dash.destroy()
+
+    ctk.CTkButton(bottom, text="Logout", fg_color="red", command=logout).pack(pady=20)# FRAMES
 home_frame = ctk.CTkFrame(root)
 signup_frame = ctk.CTkFrame(root)
 login_frame = ctk.CTkFrame(root)
@@ -234,6 +445,7 @@ def login():
                 "Welcome",
                 f"Welcome Dr. {result[0]}!"
             )
+            open_dashboard(result[0])
         else:
             messagebox.showerror(
                 "Login Failed",
@@ -269,3 +481,4 @@ back_btn2.pack()
 show_frame(home_frame)
 
 root.mainloop()
+
