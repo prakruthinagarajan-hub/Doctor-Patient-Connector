@@ -77,14 +77,14 @@ def patient_signup():
         messagebox.showerror("Error", str(e))
 
 
-def show_doctors():
+def show_doctor():
     global current_patient
 
     locality = current_patient[4]
 
     doc_win = ctk.CTkToplevel()
     doc_win.geometry("650x600")
-    doc_win.title("Available Doctors")
+    doc_win.title("Available doctor")
 
     doc_win.lift()
     doc_win.focus_force()
@@ -92,7 +92,7 @@ def show_doctors():
 
     ctk.CTkLabel(
         doc_win,
-        text=f"Doctors in {locality}",
+        text=f"doctor in {locality}",
         font=("Segoe UI", 22, "bold")
     ).pack(pady=10)
 
@@ -100,21 +100,21 @@ def show_doctors():
     scroll_frame.pack(padx=20, pady=10, fill="both", expand=True)
 
     cursor.execute(
-        "SELECT name, specialization, locality, patients_count FROM doctors WHERE locality=%s",
+        "SELECT name, specialization, locality, patients_count FROM doctor WHERE locality=%s",
         (locality,)
     )
 
-    doctors = cursor.fetchall()
+    doctor = cursor.fetchall()
 
-    if not doctors:
-        ctk.CTkLabel(scroll_frame, text="No doctors available").pack(pady=20)
+    if not doctor:
+        ctk.CTkLabel(scroll_frame, text="No doctor available").pack(pady=20)
         return
 
     #  Selected doctor variable
     selected_doctor = ctk.StringVar(value="")
 
-    #  Display doctors with radio button
-    for doc in doctors:
+    #  Display doctor with radio button
+    for doc in doctor:
         name, spec, locality, count = doc
 
         card = ctk.CTkFrame(scroll_frame, corner_radius=15)
@@ -142,53 +142,53 @@ def show_doctors():
             text=f"Locality: {locality}"
         ).pack(anchor="w", padx=10)
 
-    # Slot selection
-    ctk.CTkLabel(doc_win, text="Select Time Slot").pack(pady=5)
+    # time_slot selection
+    ctk.CTkLabel(doc_win, text="Select Time time_slot").pack(pady=5)
 
-    slot_box = ctk.CTkComboBox(
+    time_slot_box = ctk.CTkComboBox(
         doc_win,
         values=["9:00 - 10:00 am", "10:00 - 11:00 am", "2:00 - 3:00 pm","3:00 - 4:00 pm", "5:00 - 6:00 pm","6:00 - 7:00 pm"],
         width=250
     )
-    slot_box.set("Choose Slot")
-    slot_box.pack(pady=5)
+    time_slot_box.set("Choose time_slot")
+    time_slot_box.pack(pady=5)
 
-    # Problem textbox
-    ctk.CTkLabel(doc_win, text="Describe your problem").pack(pady=5)
+    # ailment textbox
+    ctk.CTkLabel(doc_win, text="Describe your ailment").pack(pady=5)
 
-    problem_box = ctk.CTkTextbox(doc_win, height=80, width=400)
-    problem_box.pack(pady=5)
+    ailment_box = ctk.CTkTextbox(doc_win, height=80, width=400)
+    ailment_box.pack(pady=5)
 
     #Submit function
     def submit_appointment():
         doctor = selected_doctor.get()
-        slot = slot_box.get()
-        problem = problem_box.get("1.0", "end").strip()
+        time_slot = time_slot_box.get()
+        ailment = ailment_box.get("1.0", "end").strip()
 
         if not doctor:
             messagebox.showerror("Error", "Select a doctor")
             return
 
-        if slot == "Choose Slot":
-            messagebox.showerror("Error", "Select a time slot")
+        if time_slot == "Choose time_slot":
+            messagebox.showerror("Error", "Select a time time_slot")
             return
 
-        if not problem:
-            messagebox.showerror("Error", "Enter your problem")
+        if not ailment:
+            messagebox.showerror("Error", "Enter your ailment")
             return
 
         try:
             cursor.execute(
-                "INSERT INTO appointments(patient_aadhar_id, doctor_name, slot, problem) VALUES (%s,%s,%s,%s)",
-                (current_patient[5], doctor, slot, problem)
+                "INSERT INTO appointment(patient_id, doctor_id, time_slot, ailment) VALUES (%s,%s,%s,%s)",
+                (current_patient[5], doctor, time_slot, ailment)
             )
             con.commit()
 
             messagebox.showinfo("Success", "Appointment booked successfully")
 
             # Clear fields
-            problem_box.delete("1.0", "end")
-            slot_box.set("Choose Slot")
+            ailment_box.delete("1.0", "end")
+            time_slot_box.set("Choose time_slot")
             selected_doctor.set("")
 
         except Exception as e:
@@ -220,7 +220,7 @@ def check_patient_login():
     if user:
         current_patient = user
         messagebox.showinfo("Success", "Logged in Successfully")
-        show_doctors()
+        show_doctor()
     else:
         messagebox.showerror("Error", "Invalid login")
 
@@ -330,7 +330,7 @@ def patient_window():
     ).pack()
 
 
-#--------------------doctors page-----------------------#
+#--------------------doctor page-----------------------#
 
 def doctor_window():
 
@@ -341,7 +341,7 @@ def doctor_window():
             host="localhost",
             user="root",
             password="admin",
-            database="doctor_agency")
+            database="main_db")
 
     def open_dashboard(doctor_name):
 
@@ -372,7 +372,7 @@ def doctor_window():
             cur = conn.cursor()
 
             cur.execute("""
-                SELECT r.patient_id, p.name, r.ailment, r.time_slot, r.status
+                SELECT r.patient_id, p.name, r.ailment, r.time_time_slot, r.status
                 FROM request r
                 JOIN patient p ON p.patient_id = r.patient_id
             """)
@@ -394,7 +394,7 @@ def doctor_window():
             cur.execute("SELECT name, age, gender FROM patient WHERE patient_id=%s", (pid,))
             p = cur.fetchone()
 
-            cur.execute("SELECT ailment, time_slot FROM request WHERE patient_id=%s", (pid,))
+            cur.execute("SELECT ailment, time_time_slot FROM request WHERE patient_id=%s", (pid,))
             r = cur.fetchone()
 
             conn.close()
@@ -409,7 +409,7 @@ def doctor_window():
             ctk.CTkLabel(popup, text=f"Gender: {p[2]}").pack()
 
             ctk.CTkLabel(popup, text=f"Ailment: {r[0]}").pack()
-            ctk.CTkLabel(popup, text=f"Time Slot: {r[1]}").pack()
+            ctk.CTkLabel(popup, text=f"Time time_slot: {r[1]}").pack()
 
         # ---------------- ACCEPT / REJECT ----------------
         def update(status):
@@ -464,19 +464,19 @@ def doctor_window():
 
         ctk.CTkLabel(calendar, text="Appointments", font=("Arial", 20, "bold")).pack(pady=10)
 
-        slots = ["morning", "afternoon", "evening"]
+        time_slots = ["morning", "afternoon", "evening"]
 
         def load_calendar():
 
             for widget in calendar.winfo_children()[1:]:
                 widget.destroy()
 
-            for slot in slots:
+            for time_slot in time_slots:
 
                 box = ctk.CTkFrame(calendar)
                 box.pack(fill="x", pady=5)
 
-                ctk.CTkLabel(box, text=slot.upper(), font=("Arial", 16, "bold")).pack()
+                ctk.CTkLabel(box, text=time_slot.upper(), font=("Arial", 16, "bold")).pack()
 
                 conn = connect_db()
                 cur = conn.cursor()
@@ -485,8 +485,8 @@ def doctor_window():
                     SELECT p.name
                     FROM request r
                     JOIN patient p ON p.patient_id = r.patient_id
-                    WHERE r.time_slot=%s AND r.status='accepted'
-                """, (slot,))
+                    WHERE r.time_time_slot=%s AND r.status='accepted'
+                """, (time_slot,))
 
                 patients = cur.fetchall()
                 conn.close()
